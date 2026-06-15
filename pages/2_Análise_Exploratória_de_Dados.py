@@ -78,7 +78,7 @@ def montar_filtragem(df_lung):
     col1, col2, col3 = st.columns(3)
     col1.metric(label="Total de Pacientes Analisados", value=f"{total_pacientes}")
     col2.metric(label="Mediana de Idade", value=f"{mediana_idade} anos")
-    col3.metric(label="Prevalência de Matologia Maligna", value=f"{pct_malignos:.1f}%")
+    col3.metric(label="Prevalência de Patologia Maligna", value=f"{pct_malignos:.1f}%")
     return df_filtrado,total_pacientes
 
 def mostrar_graph_proporcao_genero_x_perfil(df_filtrado):
@@ -174,67 +174,3 @@ else:
         st.error("Nenhum dado selecionado nos filtros da barra lateral.")
     
     
-
-
-    # st.subheader("DASHBOARD DE DISTRIBUIÇÕES E CORRELAÇÕES")
-
-    # col1, col2 = st.columns(2)
-    # with col1:
-    #     st.markdown("**Distribuição: Presença de Câncer**")
-    #     fig_presenca = px.bar(
-    #         df_presenca_real,
-    #         x='Status',
-    #         y='Nº de Pacientes',
-    #         color_discrete_sequence=['#1f77b4'], 
-    #         height=350
-    #     )
-    #     fig_presenca.update_layout(margin=dict(l=20, r=20, t=20, b=20))
-    #     st.plotly_chart(fig_presenca, width='stretch')
-
-    # with col2:
-    #     st.markdown("**Distribuição: Subtipos de Câncer**")
-    #     fig_subtipos = px.bar(
-    #         df_subtipos_real,
-    #         x='Nº de Pacientes',
-    #         y='Subtipo',
-    #         orientation='h',
-    #         color='Subtipo',
-    #         color_discrete_sequence=px.colors.qualitative.Safe,
-    #         height=350
-    #     )
-    #     fig_subtipos.update_layout(showlegend=False, margin=dict(l=20, r=20, t=20, b=20))
-    #     st.plotly_chart(fig_subtipos, width='stretch')
-
-    # st.markdown("<div style='text-align: center; font-weight: bold;'>Matriz de Correlação das Features Principais</div>", unsafe_allow_html=True)
-
-    # fig_corr = px.imshow(
-    #     df_corr_real,
-    #     text_auto='.2f', 
-    #     aspect="auto",
-    #     color_continuous_scale="Blues", 
-    #     range_color=[-1.0, 1.0] 
-    # )
-    # fig_corr.update_layout(
-    #     height=500,
-    #     margin=dict(l=50, r=50, t=20, b=50),
-    #     coloraxis_showscale=True
-    # )
-    # st.plotly_chart(fig_corr, width='stretch')
-
-    # st.caption(
-    #     "**Figura 1:** Painel do Dashboard demonstrando o desbalanceamento das variáveis meta "
-    #     "e a correlação linear entre features de bio-imagem e genômica[cite: 91]."
-    # )
-
-    # st.markdown("### Interpretação e Achados Críticos da EDA")
-
-    # st.info("""
-    # * **Poder Discriminatório das Imagens:** O parâmetro `PET_SUVmax` exibe uma forte correlação positiva 
-    #  com a carga mutacional do tumor (`tumor_mutational_burden`), sugerindo diretamente que tumores 
-    #  metabolicamente ativos são mais instáveis genomicamente[cite: 29].
-    # * **Correlação Estrutural Radiômica:** Nota-se uma correlação linear moderada entre o tamanho do nódulo 
-    #  (`nodule_size_mm`) e a atenuação média em Unidades Hounsfield (`HU_mean`).
-    # * **Alerta de Desbalanceamento Crítico:** Como observado de forma acentuada na distribuição das variáveis alvo, 
-    #  há um desbalanço populacional severo tanto na detecção de presença quanto nos subtipos[cite: 92]. 
-    #  Isso exige, obrigatoriamente, tratamentos de amostragem específicos (como a técnica combinada *SMOTE-Tomek*) nas próximas fases do pipeline[cite: 92, 105].
-    # """)
