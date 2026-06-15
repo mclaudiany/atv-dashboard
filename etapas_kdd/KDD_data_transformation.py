@@ -58,7 +58,7 @@ def escalonar_por_zcore(df_train):
             if 'PD-L1_expression_level' in df_train.columns:
                 fig_antes.add_trace(go.Violin(y=df_train['PD-L1_expression_level'].dropna(), name="Expressão PD-L1 (%)", line_color="#7BB8F2", box_visible=True))
             
-            fig_antes.update_layout(title="Distribuição ORIGINAL", height=350, margin=dict(t=40, b=40, l=20, r=20))
+            fig_antes.update_layout(title="Distribuição Original", height=350, margin=dict(t=40, b=40, l=20, r=20))
             st.plotly_chart(fig_antes, width='stretch')
 
         with col_graph2:
@@ -69,7 +69,7 @@ def escalonar_por_zcore(df_train):
             if 'PD-L1_expression_level' in df_depois_num.columns:
                 fig_depois.add_trace(go.Violin(y=df_depois_num['PD-L1_expression_level'], name="Expressão PD-L1 (Z)", line_color="#7BB8F2", box_visible=True))
             
-            fig_depois.update_layout(title="Distribuição APÓS Z-SCORE", height=350, margin=dict(t=40, b=40, l=20, r=20))
+            fig_depois.update_layout(title="Distribuição Após Z-SCORE", height=350, margin=dict(t=40, b=40, l=20, r=20))
             st.plotly_chart(fig_depois, width='stretch')
 
 def mapear_categorias_encodings():
@@ -134,7 +134,7 @@ def executar_transformacao_kdd(df_train, df_test, escopo='presenca'):
     X_train, X_test = X_train.align(X_test, join='left', axis=1, fill_value=0)
 
     num_continuas = ['nodule_size_mm', 'HU_mean', 'HU_std', 'PET_SUVmax', 'PET_SUVmean', 
-                     'patient_age', 'PD-L1_expression_level', 'tumor_mutational_burden']
+                    'patient_age', 'PD-L1_expression_level', 'tumor_mutational_burden']
     
     cols_para_escalonar = [col for col in num_continuas if col in X_train.columns]
     

@@ -173,7 +173,7 @@ def executar_dbscan():
             "Distância Máxima (Epsilon - ε):",
             min_value=0.1,
             max_value=3.0,
-            value=0.5,
+            value=1.5,
             step=0.1,
             help="Distância máxima entre dois pacientes para que sejam considerados do mesmo bairro clínico."
         )
@@ -239,7 +239,7 @@ def executar_dbscan():
         st.plotly_chart(fig_dbscan, use_container_width=True)
 
         st.session_state.dbscan_labels = labels_clusters
-        st.session_state.dbscan_outliers_count = n_ruido
+        st.session_state.dbscan_X_scaled = X_scaled
 
 def executa_inferencia_gerar_predicoes():
    np.random.seed(42)

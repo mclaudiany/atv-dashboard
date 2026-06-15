@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.express as px
 import numpy as np
 import torch
-from sklearn.metrics import classification_report, accuracy_score,confusion_matrix
+from sklearn.metrics import classification_report, accuracy_score,confusion_matrix,silhouette_score, davies_bouldin_score
 
 def etapa_resultado_metricas():
     st.header("Avaliação e Interpretação de Métricas")
@@ -24,9 +24,72 @@ def etapa_resultado_metricas():
     st.subheader("Matriz de Desempenho dos Modelos")
     st.markdown("Tabela comparativa estruturada com as métricas de validação.")
     gerar_tabela_metricas_detalhada()
-
+    
     st.subheader("Análise de Erros por Matriz de Confusão")
     gerar_matriz_confusao()
+
+    st.subheader("Índices de Validação de Densidade Estritamente Numérico")
+    gerar_indice_densidade()
+    
+def gerar_indice_densidade():
+    score_silhueta,score_db, n_ruido, p_ruido = calcular_indices_densidade()
+
+    col_m1, col_m2, col_m3 = st.columns(3)
+    with col_m1:
+        if score_silhueta is not None:
+            st.metric(
+                label="Coeficiente de Silhueta (Coesão)", 
+                value=f"{score_silhueta:.3f}",
+                help="Varia de -1 a +1. Valores próximos a 1 indicam que os pacientes estão no cluster correto e distantes de outros grupos."
+            )
+        else:
+            st.metric("Coeficiente de Silhueta", "N/A", help="Indisponível: Altere os sliders para encontrar mais clusters.")
+
+    with col_m2:
+        if score_db is not None:
+            st.metric(
+                label="Índice Davies-Bouldin", 
+                value=f"{score_db:.3f}",
+                help="Mede a similaridade entre os clusters. Quanto menor o valor (próximo de 0), melhor e mais limpa é a separação física dos grupos."
+            )
+        else:
+            st.metric("Índice Davies-Bouldin", "N/A", help="Indisponível: Altere os sliders para encontrar mais clusters.")
+
+    with col_m3:
+        st.metric(
+            label="Estabilidade do Ruído", 
+            value=f"{n_ruido} Pacientes",
+            delta=f"{p_ruido:.1f}% da Base",
+            delta_color="inverse",
+            help="Volume de pacientes isolados de forma não supervisionada como perfis oncológicos atípicos."
+        )
+
+def calcular_indices_densidade():
+    labels_clusters = st.session_state.dbscan_labels
+    X_scaled = st.session_state.dbscan_X_scaled
+    
+    clusters_validos = [label for label in labels_clusters if label != -1]
+    n_clusters = len(set(clusters_validos))
+    n_ruido = list(labels_clusters).count(-1)
+    p_ruido = (n_ruido / len(labels_clusters)) * 100 if len(labels_clusters) > 0 else 0
+    
+    if n_clusters >= 1:
+        mascara_sem_ruido = (labels_clusters != -1)
+    
+        if np.sum(mascara_sem_ruido) > 5 and len(set(labels_clusters[mascara_sem_ruido])) > 1:
+            X_validacao = X_scaled[mascara_sem_ruido]
+            labels_validacao = labels_clusters[mascara_sem_ruido]
+            
+            score_silhueta = silhouette_score(X_validacao, labels_validacao)
+            
+            score_db = davies_bouldin_score(X_validacao, labels_validacao)
+        else:
+            score_silhueta = None
+            score_db = None
+    else:
+        score_silhueta = None
+        score_db = None
+    return score_silhueta,score_db, n_ruido, p_ruido
     
 
 def montar_conclusao():
