@@ -66,6 +66,11 @@ if "y_true_m2" not in st.session_state:
     st.session_state.y_true_m2 = None
 if "y_pred_m2" not in st.session_state:
     st.session_state.y_pred_m2 = None
+if "dbscan_X_scaled" not in st.session_state:
+    st.session_state.dbscan_X_scaled = None
+if "dbscan_labels" not in st.session_state:
+    st.session_state.dbscan_labels = None
+
 
 if "1. Seleção e Mapeamento" in etapa_selecionada:
     df_test, df_train = etapa_selecao_mapeamento()
