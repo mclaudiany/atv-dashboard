@@ -28,6 +28,8 @@ etapa_selecionada = st.sidebar.radio(
     ]
 )
 
+if "df" not in st.session_state:
+    st.session_state.df = None
 if "df_test" not in st.session_state:
     st.session_state.df_test = None
 if "df_train" not in st.session_state:
