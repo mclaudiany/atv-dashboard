@@ -28,7 +28,7 @@ def etapa_resultado_metricas():
     st.subheader("Análise de Erros por Matriz de Confusão")
     gerar_matriz_confusao()
 
-    st.subheader("Índices de Validação de Densidade Estritamente Numérico")
+    st.subheader("Índices de Validação de Densidade")
     gerar_indice_densidade()
     
 def gerar_indice_densidade():
