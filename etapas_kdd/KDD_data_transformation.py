@@ -3,38 +3,68 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 from sklearn.preprocessing import StandardScaler
+import plotly.express as px
+from imblearn.over_sampling import SMOTE
 
-def etapa_transformacao_dados(df_train):
+def etapa_transformacao_dados(df_train, df_test):
     st.header("Transformação de Dados")
     st.subheader("Encoding e Padronização Estrutural")
     st.markdown("A transformação dos dados mapeia as variáveis qualitativas para formatos numéricos e reescalona os atributos contínuos.")
 
     st.subheader("Mapeamento de Categorias e Encodings")
     mapear_categorias_encodings()
-
-    st.subheader("Escalonamento por Padronização Z-score")
-    escalonar_por_zcore(df_train)
     
-    st.subheader("Estruturação das Features")
-    estruturar_features()
+    st.markdown("---")
+    
+    st.subheader("Escalonamento por Padronização Z-score")
+    df_train_scaled = escalonar_por_zcore(df_train)
+    
+    st.subheader("Estruturação das Features - Modelo 1")
+    estruturar_features(df_train_scaled, df_test, modelo=1)
+    
+    st.subheader("Balanceamento de Classes via SMOTE")
+    df_train_m2 = balancear_smote_multiclasse(df_train_scaled)
+    
+    st.subheader("Estruturação das Features - Modelo 2")
+    estruturar_features(df_train_m2, df_test, modelo=2)
 
-def estruturar_features():
-    if "X_train_m1" in st.session_state and st.session_state.X_train_m1 is not None:
-        st.markdown("Estrutura das features de treino prontas para alimentar os tensores da rede neural:")
-        st.dataframe(st.session_state.X_train_m1.head(5), width='stretch')
-    else:
-        X_train_m1, X_test_m1, y_train_m1, y_test_m1 = executar_transformacao_kdd(
-            st.session_state.df_train, 
-            st.session_state.df_test, 
-            escopo='presenca'
-        )
+def estruturar_features(df_final_treino, df_teste, modelo=1):
+    features_continuas = ['nodule_size_mm', 'HU_mean', 'HU_std', 'PET_SUVmax', 'PET_SUVmean', 'patient_age', 'PD-L1_expression_level', 'tumor_mutational_burden']
+    features = [col for col in features_continuas if col in df_final_treino.columns]
+    
+    if modelo == 1:
+        st.markdown("#### Estruturação de Tensores - Modelo 1 (Detecção Binária)")
         
-        st.session_state.X_train_m1 = X_train_m1
-        st.session_state.X_test_m1 = X_test_m1
-        st.session_state.y_train_m1 = y_train_m1
-        st.session_state.y_test_m1 = y_test_m1
+        X_train = df_final_treino[features]
+        y_train = df_final_treino['cancer_presence']
         
-        st.success("O pipeline KDD foi executado! Matrizes geradas e escalonadas via Z-score com sucesso.")
+        X_test = df_teste[features]
+        y_test = df_teste['cancer_presence']
+        
+        st.session_state.X_train_m1 = X_train
+        st.session_state.y_train_m1 = y_train
+        st.session_state.X_test_m1 = X_test
+        st.session_state.y_test_m1 = y_test
+        
+        st.dataframe(X_train.head(5), width='stretch')
+        st.success(f"Tensores do Modelo 1 estruturados: {X_train.shape[0]} amostras de treino.")
+    elif modelo == 2:
+        st.markdown("#### Estruturação de Tensores - Modelo 2 (Subtipos Histológicos)")
+        
+        X_train = df_final_treino[features]
+        y_train = df_final_treino['cancer_subtype']
+        
+        df_teste_cancer = df_teste[df_teste['cancer_presence'] == 1]
+        X_test = df_teste_cancer[features]
+        y_test = df_teste_cancer['cancer_subtype']
+        
+        st.session_state.X_train_m2 = X_train
+        st.session_state.y_train_m2 = y_train
+        st.session_state.X_test_m2 = X_test
+        st.session_state.y_test_m2 = y_test
+        
+        st.dataframe(X_train.head(3), use_container_width=True)
+        st.success(f"Tensores do Modelo 2 (SMOTE) estruturados: {X_train.shape[0]} amostras de treino balanceadas.")
         st.rerun()
 
 def escalonar_por_zcore(df_train):
@@ -71,6 +101,12 @@ def escalonar_por_zcore(df_train):
             
             fig_depois.update_layout(title="Distribuição Após Z-SCORE", height=350, margin=dict(t=40, b=40, l=20, r=20))
             st.plotly_chart(fig_depois, width='stretch')
+            
+        df_train_escalado = df_train.copy()
+        df_train_escalado[num_existentes] = df_fill
+        df_train_escalado[num_existentes] = df_depois_num.values
+        
+        return df_train_escalado
 
 def mapear_categorias_encodings():
     col_enc1, col_enc2 = st.columns(2)
@@ -97,6 +133,53 @@ def mapear_categorias_encodings():
         df_demo_bin["Antes: patient_gender"] = df_demo_bin["Antes: patient_gender"].astype(str)
         st.dataframe(df_demo_bin, width='stretch', hide_index=True)
 
+def balancear_smote_multiclasse(df_train_scaled):
+    num_continuas = ['nodule_size_mm', 'HU_mean', 'HU_std', 'PET_SUVmax', 'PET_SUVmean', 'patient_age', 'PD-L1_expression_level', 'tumor_mutational_burden']
+    
+    features_existentes = [col for col in num_continuas if col in df_train_scaled.columns]
+    target_col = 'cancer_subtype'
+
+    if target_col not in df_train_scaled.columns:
+        st.warning(f"Coluna alvo '{target_col}' não encontrada para o SMOTE. Pulando balanceamento.")
+        return df_train_scaled
+    
+    df_filtrado = df_train_scaled[df_train_scaled['cancer_presence'] == 1].copy() if 'cancer_presence' in df_train_scaled.columns else df_train_scaled.copy()
+    df_filtrado = df_filtrado.dropna(subset=[target_col])
+    
+    X = df_filtrado[features_existentes]
+    y = df_filtrado[target_col]
+    
+    if len(y.value_counts()) < 2:
+        st.warning("Classes insuficientes no subtipo de câncer para aplicar o SMOTE.")
+        return df_train_scaled
+
+    smote = SMOTE(k_neighbors=3, random_state=42)
+    X_resampled, y_resampled = smote.fit_resample(X, y)
+
+    df_resampled = pd.DataFrame(X_resampled, columns=features_existentes)
+    df_resampled[target_col] = y_resampled
+    
+    if 'cancer_presence' in df_train_scaled.columns:
+        df_resampled['cancer_presence'] = 1
+        
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown("#### Distribuição Original (Real)")
+        contagem_antes = y.value_counts().reset_index()
+        contagem_antes.columns = [target_col, 'Qtd Amostras']
+        fig_antes = px.bar(contagem_antes, x=target_col, y='Qtd Amostras', color=target_col, template="plotly_white")
+        st.plotly_chart(fig_antes, use_container_width=True)
+        
+    with col2:
+        st.markdown("#### Distribuição Sintética (SMOTE)")
+        contagem_depois = pd.Series(y_resampled).value_counts().reset_index()
+        contagem_depois.columns = [target_col, 'Qtd Amostras']
+        fig_depois = px.bar(contagem_depois, x=target_col, y='Qtd Amostras', color=target_col, template="plotly_white")
+        st.plotly_chart(fig_depois, use_container_width=True)
+
+    st.success(f"**SMOTE Concluído:** A base do Modelo 2 foi balanceada. Amostras expandidas de {len(y)} para {len(y_resampled)} registros sintéticos.")
+
+    return df_resampled
 
 def executar_transformacao_kdd(df_train, df_test, escopo='presenca'):
     features_radiomicas = ['nodule_size_mm', 'nodule_texture', 'HU_mean', 'HU_std', 

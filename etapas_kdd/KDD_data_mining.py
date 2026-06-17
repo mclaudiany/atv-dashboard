@@ -120,7 +120,6 @@ def executar_mlp(loss_selecionada):
                      <strong>Modelo 1 - Presença de Câncer (Binário):</strong>
                   </p>
                   <ul style="color:#2D3748; font-size:14px; line-height:1.6; margin-bottom: 0; padding-left: 20px;">
-                     <li><b>Camadas Ocultas:</b> Linear(13 ➔ 32) + ReLU() + Dropout(0.3) + Linear(32 ➔ 16) + ReLU().</li>
                      <li><b>Função de Perda Ativa:</b> {loss_selecionada.split(' (')[0]}.</li>
                   </ul>
             </div>
@@ -133,7 +132,6 @@ def executar_mlp(loss_selecionada):
                   <strong>Modelo 2 - Subtipo de Câncer (Multiclasse):</strong>
                </p>
                <ul style="color:#2D3748; font-size:14px; line-height:1.6; margin-bottom: 0; padding-left: 20px;">
-                  <li><b>Camadas Ocultas:</b> Linear(18 ➔ 64) + ReLU() + Dropout(0.3) + Linear(64 ➔ 32) + ReLU().</li>
                   <li><b>Função de Perda Ativa:</b> CrossEntropyLoss (Multiclasse).</li>
                </ul>
          </div>
