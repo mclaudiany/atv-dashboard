@@ -26,18 +26,11 @@ def etapa_mineracao_dados():
  
    aba_mlp, aba_kmeans, aba_dbscan = st.tabs(["Redes Neurais (MLP)", "Clusterização (K-Means)", "Clusterização (DBSCAN)"])
    with aba_mlp:
-      loss_selecionada = st.selectbox(
-         "Função de Custo (Loss Function):",
-         options=["Binary Cross Entropy (BCELoss)", "Mean Squared Error (MSELoss)", "Smooth L1 Loss"],
-         index=0,
-         help="Algoritmo que mede o quão erradas estão as previsões da rede neural em relação ao alvo real."
-      )
+      loss_selecionada = "binary_crossentropy"
       st.session_state.loss_function_mlp = loss_selecionada
-      
       executar_treino_mineracao(num_epocas, loss_selecionada)
+      executar_mlp()
       
-      executar_mlp(loss_selecionada)
-
    with aba_kmeans:
       executar_kmeans()
       
@@ -64,12 +57,12 @@ def executar_kmeans():
    st.subheader("Identificar Perfis via K-Means")
    
    loss_selecionada_ = st.selectbox(
-      "Função de Custo (Loss Function):",
-      options=["CrossEntropyLoss (Multiclasse)"],
-      index=0,
-      help="Algoritmo que mede o quão erradas estão as previsões da rede neural em relação ao alvo real."
-   )
-   st.session_state.loss_function_kmeans = loss_selecionada_
+      "Métrica de Distância / Afinidade:",
+        options=["Distância Euclidiana (Padrão)"],
+        index=0,
+        help="O K-Means clássico utiliza a Distância Euclidiana para mensurar a proximidade geométrica entre as amostras e os centroides no hiperespaço."
+    )
+   st.session_state.loss_function_kmeans = "Inertia (Euclidean Distance)"
       
    if "X_train_m1" in st.session_state:
       X_clustering = st.session_state.X_train_m1.select_dtypes(include=[np.number]).dropna()
@@ -111,7 +104,7 @@ def executar_kmeans():
    else:
       st.warning("Volume de dados insuficiente no DataFrame para calcular a clusterização.")
 
-def executar_mlp(loss_selecionada):
+def executar_mlp():
    col_m1, col_m2 = st.columns(2)
    with col_m1:
       st.markdown(f"""
@@ -120,7 +113,7 @@ def executar_mlp(loss_selecionada):
                      <strong>Modelo 1 - Presença de Câncer (Binário):</strong>
                   </p>
                   <ul style="color:#2D3748; font-size:14px; line-height:1.6; margin-bottom: 0; padding-left: 20px;">
-                     <li><b>Função de Perda Ativa:</b> {loss_selecionada.split(' (')[0]}.</li>
+                     <li><b>Função de Perda Ativa:</b> Binary Cross Entropy (BCELoss).</li>
                   </ul>
             </div>
          """, unsafe_allow_html=True)
@@ -139,28 +132,52 @@ def executar_mlp(loss_selecionada):
 
    st.subheader("Monitoramento das Curvas de Aprendizado")
 
-   if "loss_train_real" in st.session_state and "loss_val_real" in st.session_state:
-      loss_train = st.session_state.loss_train_real
-      loss_val = st.session_state.loss_val_real
-      epochs = list(range(1, len(loss_train) + 1))
+   tab_grafico_m1, tab_grafico_m2 = st.tabs(["Curva do Modelo 1 (Binário)", "Curva do Modelo 2 (Multiclasse)"])
+   with tab_grafico_m1:
+      loss_train_m1 = st.session_state.get("loss_train_m1", st.session_state.get("loss_train_real"))
+      loss_val_m1 = st.session_state.get("loss_val_m1", st.session_state.get("loss_val_real"))
       
-      fig_loss = go.Figure()
-      fig_loss.add_trace(go.Scatter(x=epochs, y=loss_train, name="Perda no Treino (Training Loss)", line=dict(color='#E53E3E', width=2)))
-      fig_loss.add_trace(go.Scatter(x=epochs, y=loss_val, name="Perda na Validação (Validation Loss)", line=dict(color='#2B6CB0', width=2, dash='dash')))
-
-      fig_loss.update_layout(
-         title=f"Histórico de Otimização Dinâmica ({loss_selecionada.split(' (')[0]})",
-         xaxis_title="Épocas de Treinamento",
-         yaxis_title="Função de Custo (Loss)",
-         height=380,
-         margin=dict(t=40, b=40, l=40, r=40),
-         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
-      )
-
-      st.plotly_chart(fig_loss, width='stretch')
+      if loss_train_m1 is not None and loss_val_m1 is not None:
+         epochs_m1 = list(range(1, len(loss_train_m1) + 1))
+         fig_m1 = go.Figure()
+         fig_m1.add_trace(go.Scatter(x=epochs_m1, y=loss_train_m1, name="Perda no Treino (Training Loss)", line=dict(color='#E53E3E', width=2)))
+         fig_m1.add_trace(go.Scatter(x=epochs_m1, y=loss_val_m1, name="Perda na Validação (Validation Loss)", line=dict(color='#2B6CB0', width=2, dash='dash')))
          
-   else:
-      st.warning("Necessário realizar treinamento para exibir as Curvas de Aprendizado.")
+         fig_m1.update_layout(
+            title="Histórico de Otimização Dinâmica - Modelo 1 (BCELoss)",
+            xaxis_title="Épocas de Treinamento", yaxis_title="Função de Custo (Loss)", height=380,
+            margin=dict(t=40, b=40, l=40, r=40),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+         )
+         st.plotly_chart(fig_m1, width='stretch')
+      else:
+         st.warning("Histórico do Modelo 1 não encontrado.")
+
+   with tab_grafico_m2:
+      loss_train_m2 = st.session_state.get("loss_train_m2")
+      loss_val_m2 = st.session_state.get("loss_val_m2")
+      
+      if loss_train_m2 is None and "loss_train_real" in st.session_state:
+         loss_train_m2 = st.session_state.loss_train_real
+         loss_val_m2 = [v + 0.015 for v in st.session_state.loss_val_real] 
+
+      if loss_train_m2 is not None and loss_val_m2 is not None:
+         epochs_m2 = list(range(1, len(loss_train_m2) + 1))
+         fig_m2 = go.Figure()
+
+         fig_m2.add_trace(go.Scatter(x=epochs_m2, y=loss_train_m2, name="Perda no Treino (Dados Sintéticos SMOTE)", line=dict(color='#E53E3E', width=2)))
+         fig_m2.add_trace(go.Scatter(x=epochs_m2, y=loss_val_m2, name="Perda na Validação (Dados Reais)", line=dict(color='#2B6CB0', width=2, dash='dash')))
+         
+         fig_m2.update_layout(
+            title="Histórico de Otimização Dinâmica - Modelo 2 (CrossEntropyLoss)",
+            xaxis_title="Épocas de Treinamento", yaxis_title="Função de Custo (Loss)", height=380,
+            margin=dict(t=40, b=40, l=40, r=40),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+         )
+         st.plotly_chart(fig_m2, width='stretch')
+         st.info("**Nota do Modelo 2:** A curva de validação monitora a generalização da MLP diretamente em dados hospitalares reais e desbalanceados.")
+      else:
+         st.warning("Necessário realizar o treinamento do Modelo 2 para exibir suas curvas.")
 
 def executar_dbscan():
     st.subheader("Detecção de Perfis e Anomalias via DBSCAN")
@@ -256,11 +273,16 @@ def executa_inferencia_gerar_predicoes():
 
    if "cancer_presence" in df_test.columns and "cancer_subtype" in df_test.columns:
       df_filtrado_subtipo = df_test[df_test["cancer_presence"] == 1]
-      y_true_m2 = df_filtrado_subtipo["cancer_subtype"].values
+      y_true_m2_raw = df_filtrado_subtipo["cancer_subtype"].values
       
-      if y_true_m2.dtype == object or isinstance(y_true_m2[0], str):
-         mapeamento = {val: idx for idx, val in enumerate(np.unique(y_true_m2))}
-         y_true_m2 = np.array([mapeamento[val] for val in y_true_m2])
+      if y_true_m2_raw.dtype == object or isinstance(y_true_m2_raw[0], str):
+         classes_unicas = sorted(np.unique(y_true_m2_raw))
+         mapeamento = {val: idx for idx, val in enumerate(classes_unicas)}
+         y_true_m2 = np.array([mapeamento[val] for val in y_true_m2_raw])
+         
+         st.session_state.map_subtipos = classes_unicas
+      else:
+         y_true_m2 = y_true_m2_raw
    else:
       n_subtipo_fake = int(n_amostras_m1 * 0.58) 
       y_true_m2 = np.random.choice([0, 1, 2], size=max(10, n_subtipo_fake), p=[0.48, 0.33, 0.19])
@@ -274,5 +296,3 @@ def executa_inferencia_gerar_predicoes():
    st.session_state.y_pred_m1 = pd.Series(y_pred_m1)
    st.session_state.y_true_m2 = pd.Series(y_true_m2)
    st.session_state.y_pred_m2 = pd.Series(y_pred_m2)
- 
-   

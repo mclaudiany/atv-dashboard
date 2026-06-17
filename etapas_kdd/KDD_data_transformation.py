@@ -19,11 +19,17 @@ def etapa_transformacao_dados(df_train, df_test):
     st.subheader("Escalonamento por Padronização Z-score")
     df_train_scaled = escalonar_por_zcore(df_train)
     
+    st.markdown("---")
+    
     st.subheader("Estruturação das Features - Modelo 1")
     estruturar_features(df_train_scaled, df_test, modelo=1)
     
+    st.markdown("---")
+    
     st.subheader("Balanceamento de Classes via SMOTE")
     df_train_m2 = balancear_smote_multiclasse(df_train_scaled)
+    
+    st.markdown("---")
     
     st.subheader("Estruturação das Features - Modelo 2")
     estruturar_features(df_train_m2, df_test, modelo=2)
@@ -63,7 +69,7 @@ def estruturar_features(df_final_treino, df_teste, modelo=1):
         st.session_state.X_test_m2 = X_test
         st.session_state.y_test_m2 = y_test
         
-        st.dataframe(X_train.head(3), use_container_width=True)
+        st.dataframe(X_train.head(3), width='stretch')
         st.success(f"Tensores do Modelo 2 (SMOTE) estruturados: {X_train.shape[0]} amostras de treino balanceadas.")
         st.rerun()
 
@@ -168,14 +174,14 @@ def balancear_smote_multiclasse(df_train_scaled):
         contagem_antes = y.value_counts().reset_index()
         contagem_antes.columns = [target_col, 'Qtd Amostras']
         fig_antes = px.bar(contagem_antes, x=target_col, y='Qtd Amostras', color=target_col, template="plotly_white")
-        st.plotly_chart(fig_antes, use_container_width=True)
+        st.plotly_chart(fig_antes, width='stretch')
         
     with col2:
         st.markdown("#### Distribuição Sintética (SMOTE)")
         contagem_depois = pd.Series(y_resampled).value_counts().reset_index()
         contagem_depois.columns = [target_col, 'Qtd Amostras']
         fig_depois = px.bar(contagem_depois, x=target_col, y='Qtd Amostras', color=target_col, template="plotly_white")
-        st.plotly_chart(fig_depois, use_container_width=True)
+        st.plotly_chart(fig_depois, width='stretch')
 
     st.success(f"**SMOTE Concluído:** A base do Modelo 2 foi balanceada. Amostras expandidas de {len(y)} para {len(y_resampled)} registros sintéticos.")
 
