@@ -236,7 +236,7 @@ def executar_dbscan():
         )
         
         fig_dbscan.update_layout(margin=dict(t=40, b=40, l=40, r=40))
-        st.plotly_chart(fig_dbscan, use_container_width=True)
+        st.plotly_chart(fig_dbscan, width='stretch')
 
         st.session_state.dbscan_labels = labels_clusters
         st.session_state.dbscan_X_scaled = X_scaled
