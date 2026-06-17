@@ -99,7 +99,7 @@ elif "2. Pré-processamento e Limpeza" in etapa_selecionada:
         st.session_state.df_test = pd.concat([X_test, y_test], axis=1)
     
 elif "3. Transformação de Dados" in etapa_selecionada:
-    etapa_transformacao_dados(st.session_state.df_train)
+    etapa_transformacao_dados(st.session_state.df_train, st.session_state.df_test)
             
 elif "4. Mineração de Dados" in etapa_selecionada:
     etapa_mineracao_dados()

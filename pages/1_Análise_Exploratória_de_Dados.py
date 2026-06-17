@@ -263,8 +263,7 @@ def secao_justificativa_metodologica(df_train, df_test):
     st.markdown(f"""
     **Reamostragem Estatística no Modelo 2:**
     * O **Modelo 1** (está balanceado em {perc_saudavel:.1f}/{perc_maligno:.1f}). 
-    * O **Modelo 2** enfrenta um desbalanceamento multiclasse: ({perc_majoritaria:.1f}% vs. {perc_minoritaria:.1f}%). 
-    Se Rede Neura MLP Multiclasse for treinada com esses dados, ela sofrerá de **sub-aprendizagem (underfitting)**.
+    * O **Modelo 2** enfrenta um desbalanceamento multiclasse: ({perc_majoritaria:.1f}% vs. {perc_minoritaria:.1f}%).
     """, unsafe_allow_html=True)
     
     st.markdown(f"""
@@ -389,15 +388,12 @@ def secao_analise_atributos_nodulo_pp1(df_train, df_test):
     st.success("""
     **Evidência Visual de Separação:**
     
-    O objetivo desta análise é **provar visualmente que nódulos malignos tendem a ser maiores e a consumir mais glicose**. 
+    O objetivo desta análise é **validar a capacidade de discriminação estatística** das variáveis de bioimagem entre as classes diagnósticas.
     
-    * **Nódulos Malignos (Vermelho):** As caixas deslocadas para o topo do eixo Y, indicando diâmetros superiores e altos índices de ${SUV_max}$ 
-    (devido ao efeito Warburg de hipermetabolismo celular).
-    * **Nódulos Benignos/Saudáveis (Azul):** Concentram-se na base inferior do gráfico.
+    * **Nódulos Malignos (Azul):** Apresentam caixas deslocadas verticalmente para o topo do eixo Y. Esse comportamento reflete altos índices de ${SUV_max}$.
+    * **Pacientes Saudáveis (Vermelho):** Concentram-se na base inferior dos gráficos, indicando dimensões normais e consumo energético padrão de tecidos.
     
-    **Conclusão:** Para o modelo 1, a distância entre as caixas confirma que as features radiômicas possuem **alto poder discriminatório**, 
-    compensando a neutralidade das variáveis demográficas e servindo como a principal fundação para os neurônios da MLP realizarem a 
-    triagem binária.
+    **Conclusão:** A distância interquartil e o afastamento das medianas confirmam que os atributos radiômicos possuem **alto poder discriminatório** para o Modelo 1.
     """)
  
 def secao_analise_distribuicao_idade_subtipo_pp2(df_treino, df_teste):
