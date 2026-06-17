@@ -18,7 +18,7 @@ def carregar_dataframe(path):
     df = pd.read_csv(path)
     return df
 
-if "df" is not st.session_state:
+if "df" not in st.session_state:
     st.session_state.df = None
 
 df_treino = carregar_dataframe('./data/train.csv')
