@@ -71,6 +71,7 @@ def secao_volumetria(df_train, df_test):
             "Tipo de Dado": [str(dtype) for dtype in df.dtypes],
             "Exemplo de Registro": [df[col].iloc[0] if len(df) > 0 else "N/A" for col in df.columns]
         })
+        info_colunas["Exemplo de Registro"] = info_colunas["Exemplo de Registro"].astype(str)
         st.dataframe(info_colunas, hide_index=True, width='stretch')
 
 def secao_qualidade_dados(df_train, df_test):
@@ -95,7 +96,7 @@ def secao_qualidade_dados(df_train, df_test):
             st.success("**Nenhum valor ausente identificado!**")
         else:
             st.error(f"Detectados **{total_nulos}** valores nulos nas colunas.")
-            st.dataframe(df_nulos, hide_index=True, width='stretch')
+            st.dataframe(df_nulos.astype(str), hide_index=True, width='stretch')
             st.caption("O pipeline aplicará imputação (média/mediana) antes do treinamento.")
 
     with col2:
@@ -261,7 +262,7 @@ def secao_justificativa_metodologica(df_train, df_test):
     
     st.markdown(f"""
     **Reamostragem Estatística no Modelo 2:**
-    * O **Modelo 1** (está balanceado em 44/56). 
+    * O **Modelo 1** (está balanceado em {perc_saudavel:.1f}/{perc_maligno:.1f}). 
     * O **Modelo 2** enfrenta um desbalanceamento multiclasse: ({perc_majoritaria:.1f}% vs. {perc_minoritaria:.1f}%). 
     Se Rede Neura MLP Multiclasse for treinada com esses dados, ela sofrerá de **sub-aprendizagem (underfitting)**.
     """, unsafe_allow_html=True)
