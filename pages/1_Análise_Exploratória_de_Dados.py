@@ -579,7 +579,7 @@ def secao_identificacao_outliers_dbscan_pp2(df_treino, df_teste):
             margin=dict(l=40, r=40, t=60, b=40)
         )
         
-        st.plotly_chart(fig_9, use_container_width=True)
+        st.plotly_chart(fig_9, width='stretch')
         
         n_outliers = (df_dbscan['Cluster_DBSCAN'] == -1).sum()
         pct_outliers = (n_outliers / len(df_dbscan)) * 100
