@@ -6,7 +6,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-st.title("Pipeline KDD: Detecção e Subtipagem de Câncer de Pulmão")
+st.title("Detecção e Subtipagem de Câncer de Pulmão")
 st.markdown("---")
 
 st.markdown("""
