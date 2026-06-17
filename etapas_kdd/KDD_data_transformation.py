@@ -94,6 +94,7 @@ def mapear_categorias_encodings():
             "Antes: patient_gender": ["Male", "Female", "Male"],
             "Depois: patient_gender (Mapeado)": [0, 1, 0]
         })
+        df_demo_bin["Antes: patient_gender"] = df_demo_bin["Antes: patient_gender"].astype(str)
         st.dataframe(df_demo_bin, width='stretch', hide_index=True)
 
 
