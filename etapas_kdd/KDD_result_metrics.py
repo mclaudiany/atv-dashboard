@@ -4,6 +4,7 @@ import plotly.express as px
 import numpy as np
 import torch
 from sklearn.metrics import classification_report, accuracy_score,confusion_matrix,silhouette_score, davies_bouldin_score
+from sklearn.ensemble import RandomForestClassifier
 
 def etapa_resultado_metricas():
     st.header("Avaliação e Interpretação de Métricas")
@@ -21,15 +22,38 @@ def etapa_resultado_metricas():
         f"Critérios de custo utilizados: MLP - {loss_mlp_limpo} e KMeans - {loss_name_kmeans}."
     )
     
-    st.subheader("Matriz de Desempenho dos Modelos")
-    st.markdown("Tabela comparativa estruturada com as métricas de validação.")
-    gerar_tabela_metricas_detalhada()
+    tab_atributos, tab_desempenho, tab_confusao, tab_densidade = st.tabs([
+        "Importância de Atributos", 
+        "Matriz de Desempenho dos Modelos", 
+        "Matriz de Confusão",
+        "Validação de Densidade"
+    ])
     
-    st.subheader("Análise de Erros por Matriz de Confusão")
-    gerar_matriz_confusao()
+    with tab_atributos:
+        st.title("Análise de Importância de Atributos (Feature Importance)")
+        df_completo = pd.concat([st.session_state.df_train, st.session_state.df_test], ignore_index=True)
 
-    st.subheader("Índices de Validação de Densidade")
-    gerar_indice_densidade()
+        generos_selecionados = st.multiselect("Filtrar por Gênero:", options=df_completo['patient_gender'].unique())
+        subtipos_selecionados = st.multiselect("Filtrar por Subtipo:", options=df_completo['cancer_subtype'].unique())
+
+        df_filtrado = df_completo[
+            (df_completo['patient_gender'].isin(generos_selecionados)) & 
+            (df_completo['cancer_subtype'].isin(subtipos_selecionados))
+        ]
+
+        mostrar_feature_importance(df_filtrado)
+                
+    with tab_desempenho:
+        st.title("Tabela comparativa estruturada com as métricas de validação.")
+        gerar_tabela_metricas_detalhada()
+    
+    with tab_confusao:
+        st.title("Análise de Erros por Matriz de Confusão")
+        gerar_matriz_confusao()
+
+    with tab_densidade:
+        st.title("Índices de Validação de Densidade")
+        gerar_indice_densidade()
     
 def gerar_indice_densidade():
     score_silhueta,score_db, n_ruido, p_ruido = calcular_indices_densidade()
@@ -91,7 +115,6 @@ def calcular_indices_densidade():
         score_db = None
     return score_silhueta,score_db, n_ruido, p_ruido
     
-
 def montar_conclusao():
     if "y_true_m1" in st.session_state and "y_pred_m1" in st.session_state:
         y_true_m1 = st.session_state.y_true_m1
@@ -395,3 +418,62 @@ def gerar_tabela_metricas_detalhada():
         """
 
     st.markdown(html_style + html_body_m2, unsafe_allow_html=True)
+    
+def mostrar_feature_importance(df_filtrado):
+    st.write("Selecionar qual etapa do pipeline de IA você deseja inspecionar para ver quais variáveis foram mais determinantes:")
+    
+    escolha_alvo = st.radio(
+        "Escolha o Alvo da IA:",
+        ["Presença de Câncer (Modelo 1 - Triagem)", "Subtipo de Câncer (Modelo 2 - Subtipagem)"],
+        horizontal=True
+    )
+    
+    if "Presença" in escolha_alvo:
+        target_col = 'cancer_presence'
+        titulo_grafico = "Contribuição das Variáveis na Triagem (Presença de Câncer)"
+    else:
+        target_col = 'cancer_subtype'
+        titulo_grafico = "Contribuição das Variáveis na Subtipagem Histológica"
+
+    features = ['nodule_size_mm', 'HU_mean', 'HU_std', 'PET_SUVmax', 'PET_SUVmean', 'patient_age', 'PD-L1_expression_level', 'tumor_mutational_burden']
+    
+    if target_col in df_filtrado.columns and all(col in df_filtrado.columns for col in features):
+        
+        df_ml = df_filtrado[features + [target_col]].dropna()
+        
+        if len(df_ml) == 0:
+            st.warning("Não há dados suficientes (após remoção de nulos) para calcular a importância dos atributos.")
+            return
+
+        X = df_ml[features]
+        y = df_ml[target_col]
+        
+        modelo = RandomForestClassifier(n_estimators=100, random_state=42)
+        modelo.fit(X, y)
+        
+        importances = modelo.feature_importances_
+        
+        df_importance = pd.DataFrame({
+            'Atributo': features,
+            'Importância': importances
+        }).sort_values(by='Importância', ascending=True)
+        
+        fig_importancia = px.bar(
+            df_importance,
+            x='Importância',
+            y='Atributo',
+            orientation='h',
+            title=titulo_grafico,
+            labels={'Importância': 'Grau de Importância (0 a 1)', 'Atributo': 'Características'},
+            color='Importância',
+            color_continuous_scale='Blues'
+        )
+        
+        fig_importancia.update_layout(height=350, showlegend=False, margin=dict(l=150, r=30, t=50, b=50))
+        
+        st.plotly_chart(fig_importancia, width='stretch')
+        
+        top_feature = df_importance.iloc[-1]['Atributo']
+        st.info(f"**Insight:** Para o alvo **{target_col}**, a característica **{top_feature}** foi a mais decisiva para o aprendizado do modelo.")  
+    else:
+        st.warning("Colunas necessárias para o cálculo de Machine Learning não foram encontradas.")
