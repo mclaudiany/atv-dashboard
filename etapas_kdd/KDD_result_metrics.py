@@ -134,7 +134,7 @@ def montar_conclusao():
         df_resumo_conclusao = pd.DataFrame(dados_resumo)
         st.dataframe(
             df_resumo_conclusao,
-            use_container_width=True,
+            width='stretch',
             hide_index=True,
             column_config={
                 "Objetivo do Modelo": st.column_config.TextColumn("Escopo"),
