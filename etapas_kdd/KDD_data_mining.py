@@ -13,8 +13,7 @@ from sklearn.metrics import log_loss
 
 def etapa_mineracao_dados():
    st.header("Mineração de Dados")
-   st.markdown("Aplicação de modelos de Aprendizado supervisionado(classificação) e Aprendizado Não Supervisionado (Clustering).")
-      
+   st.markdown("Aplicação de modelos de Aprendizado supervisionado (Classificação) e Aprendizado Não Supervisionado (Clusterização).")      
    st.subheader("Treinar e Minerar Dados")
    
    num_epocas = st.slider(
