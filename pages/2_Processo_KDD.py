@@ -14,7 +14,6 @@ st.set_page_config(
 )
 
 st.title("Pipeline KDD: Detecção e Subtipagem de Câncer de Pulmão")
-st.markdown("---")
 
 st.sidebar.title("Etapas do Processo KDD")
 etapa_selecionada = st.sidebar.radio(
