@@ -45,7 +45,7 @@ with tab_geral:
     secao_justificativa_metodologica(df_treino, df_teste)
 
 with tab_pp1:
-    st.markdown("## Pergunta 1: Como identificar na triagem inicial a existência de câncer?")
+    st.markdown("## Pergunta 1: Quais fatores demográficos influenciam a triagem preditiva inicial?")
     
     secao_analise_densidade_idade_pp1(df_treino, df_teste)
     
@@ -54,7 +54,7 @@ with tab_pp1:
     secao_analise_atributos_nodulo_pp1(df_treino, df_teste)
 
 with tab_pp2:
-    st.markdown("## Pergunta 2: Uma vez identificada a patologia, como mapear o seu subtipo?")
+    st.markdown("## Pergunta 2: Quais biomarcadores e padrões radiômicos discriminam os subtipos?")
     
     secao_analise_distribuicao_idade_subtipo_pp2(df_treino, df_teste)
     
