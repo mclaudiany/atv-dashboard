@@ -43,3 +43,38 @@ with st.expander("Modelo 2: Identificação do Subtipo de Câncer", expanded=Tru
     """)
     st.warning("Pacientes com valor \"No Cancer\" são automaticamente removidos desta modelagem.")
 
+
+with st.expander("Atributos por Modelo", expanded=True):
+    col_md1, col_md2, col_md3 = st.columns(3)
+    with col_md1:
+        st.markdown("### Redes Neurais (MLP)")
+        st.caption("Aceita dados numéricos e categóricos (tratados).")
+        st.markdown("""
+        **Atributos de Entrada (Predritores):**
+        *   `patient_gender` *(Mapeado para 0/1)*
+        *   Filtros de Mutação (`*mutation*`)
+        *   Densidade Tomográfica (`*HU*`)
+        *   Captação PET-Scan (`*SUV*`)
+        *   Histórico de Tabagismo (`*smoke*`)
+        *   Localização Anatômica (`*location*`)
+        """)
+        
+    with col_md2:
+        st.markdown("### Clusterização (K-Means)")
+        st.caption("Filtro estrito para dados puramente numéricos.")
+        st.markdown("""
+        **Atributos Utilizados:**
+        *   Métricas de Densidade (`*HU*`)
+        *   Métricas de Captação (`*SUV*`)
+        *   Variáveis numéricas de Tabagismo (`*smoke*`)
+        """)
+        
+    with col_md3:
+        st.markdown("### Clusterização (DBSCAN)")
+        st.caption("Dados numéricos com ajuste de escala espacial.")
+        st.markdown("""
+        **Atributos Utilizados (Padronizados):**
+        *   `StandardScaler( *HU* )`
+        *   `StandardScaler( *SUV* )`
+        *   `StandardScaler( *smoke* )`
+        """)
