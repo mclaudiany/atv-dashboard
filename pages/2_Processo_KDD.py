@@ -84,6 +84,9 @@ if "1. Seleção e Mapeamento" in etapa_selecionada:
         st.session_state.df_train = df_train
     
 elif "2. Pré-processamento e Limpeza" in etapa_selecionada:
+    if st.session_state.df_train is None or st.session_state.df_test is None:
+        st.warning("⚠️ Dados não carregados. Por favor, execute a Etapa 1 (Seleção e Mapeamento) primeiro.")
+        st.stop()
     X_train, X_test, y_train, y_test  = etapa_pre_processamento(st.session_state.df_train, st.session_state.df_test)
     
     if y_train is not None:
@@ -99,6 +102,9 @@ elif "2. Pré-processamento e Limpeza" in etapa_selecionada:
         st.session_state.df_test = pd.concat([X_test, y_test], axis=1)
     
 elif "3. Transformação de Dados" in etapa_selecionada:
+    if st.session_state.df_train is None or st.session_state.df_test is None:
+        st.warning("⚠️ Dados não carregados. Por favor, execute as Etapas 1 e 2 primeiro.")
+        st.stop()
     etapa_transformacao_dados(st.session_state.df_train, st.session_state.df_test)
             
 elif "4. Mineração de Dados" in etapa_selecionada:

@@ -63,5 +63,7 @@ with tab_pp2:
     secao_analise_correlacao_atributos_quantitativos_pp2(df_treino, df_teste)
     
     secao_identificacao_outliers_dbscan_pp2(df_treino, df_teste)
+    
+
         
         
