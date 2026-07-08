@@ -4,7 +4,7 @@ import pandas as pd
 
 
 def secao_analise_densidade_idade_pp1(df_train, df_test):
-    st.markdown("### 2.1. Análise de Densidade por Idade")
+    st.markdown("### 2.1. Distribuição de Densidade por Faixa Etária")
   
     df = pd.concat([df_train, df_test], ignore_index=True)
     df_idade = df.copy()
@@ -21,7 +21,7 @@ def secao_analise_densidade_idade_pp1(df_train, df_test):
         histnorm="probability density", 
         color_discrete_sequence=["#2655b4",  "#e82f2f"],
         labels={"patient_age": "Idade do Paciente (Anos)", "probability density": "Densidade"},
-        title="Distribuição da Idade por Status do Diagnóstico"
+        title="Análise de Frequência Relativa da Idade vs. Status do Tumor"
     )
     
     fig_idade.update_traces(opacity=0.6) 
@@ -66,7 +66,7 @@ def secao_analise_distibuicao_genero_pp1(df_train, df_test):
             text="Pacientes",
             color_discrete_sequence=["#3b6bca",  "#e93f3f"],
             labels={"patient_gender": "Gênero do Paciente", "Pacientes": "Nº Absoluto de Pacientes"},
-            title="Relação de Diagnósticos por Gênero"
+            title="Relação de Diagnósticos por Gênero Biológico"
         )
         
         fig_genero.update_traces(textposition='inside')
@@ -79,7 +79,7 @@ def secao_analise_distibuicao_genero_pp1(df_train, df_test):
         """)
 
 def secao_analise_atributos_nodulo_pp1(df_train, df_test):
-    st.markdown("### 2.3. Análise dos Atributos do Nódulo")
+    st.markdown("### 2.3. Assinatura Radiômica: Capacidade Discriminatória de Bioimagem")
     st.markdown("""
     Os **atributos radiômicos** extraídos dos exames de imagem carregam a assinatura física do tumor.
     """)
@@ -116,14 +116,4 @@ def secao_analise_atributos_nodulo_pp1(df_train, df_test):
         fig_box2.update_layout(showlegend=False, height=380, margin=dict(l=10, r=10, t=40, b=10))
         st.plotly_chart(fig_box2, width='stretch')
         
-    st.success("""
-    **Evidência Visual de Separação:**
-    
-    O objetivo desta análise é **validar a capacidade de discriminação estatística** das variáveis de bioimagem entre as classes diagnósticas.
-    
-    * **Nódulos Malignos (Azul):** Apresentam caixas deslocadas verticalmente para o topo do eixo Y. Esse comportamento reflete altos índices de ${SUV_max}$.
-    * **Pacientes Saudáveis (Vermelho):** Concentram-se na base inferior dos gráficos, indicando dimensões normais e consumo energético padrão de tecidos.
-    
-    **Conclusão:** A distância interquartil e o afastamento das medianas confirmam que os atributos radiômicos possuem **alto poder discriminatório** para o Modelo 1.
-    """)
  

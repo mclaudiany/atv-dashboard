@@ -130,13 +130,6 @@ def secao_analise_correlacao_atributos_quantitativos_pp2(df_treino, df_teste):
         )
         
         st.plotly_chart(fig_correlacao, width='stretch')
-        
-        st.info("""
-            **Insight:** 
-            * A análise estatística revelou que o consumo metabólico (`PET_SUVmax`) e a carga mutacional (`tumor_mutational_burden`) 
-            apresentam **correlação linear nula (0.00)**, basicamente são variáveis totalmente independentes.
-            * O Modelo 2 precisa de ambas as fontes para fazer a triagem dos subtipos com precisão, já que uma variável não prevê a outra.
-        """)
 
 def secao_identificacao_outliers_dbscan_pp2(df_treino, df_teste):
     st.markdown("### Detecção de Outliers com DBSCAN")
@@ -199,8 +192,3 @@ def secao_identificacao_outliers_dbscan_pp2(df_treino, df_teste):
         
         st.caption(f"**Resultado do Algoritmo:** Foram identificados **{n_outliers}** pacientes como outliers ({pct_outliers:.1f}% da amostra analisada).")
         
-        st.info("""
-        **Aplicações Práticas & Camada de Proteção:** 
-        * Os pontos mapeados em vermelho representam pacientes com características clínicas ou radiómicas extremamente raras (ex: nódulos gigantes com textura incomum). 
-        * Na arquitetura do projeto, o DBSCAN atua como um **filtro de segurança**: isolando eses casos atípicos, evitando que as redes neurais (Modelos 1 e 2) induzam ao erro. 
-        """)
