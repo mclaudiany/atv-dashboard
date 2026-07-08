@@ -13,7 +13,7 @@ from sklearn.metrics import log_loss
 
 def etapa_mineracao_dados():
    st.header("Mineração de Dados")
-   st.markdown("Aplicação de modelos de aprendizado supervisionado e classificação.")
+   st.markdown("Aplicação de modelos de Aprendizado supervisionado(classificação) e Aprendizado Não Supervisionado (Clustering).")
       
    st.subheader("Treinar e Minerar Dados")
    
