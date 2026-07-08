@@ -156,7 +156,6 @@ def secao_identificacao_outliers_dbscan_pp2(df_treino, df_teste):
         scaler = StandardScaler()
         X_scaled = scaler.fit_transform(df_dbscan[[var_x, var_y]])
         
-        st.sidebar.markdown("---")
         st.sidebar.header("Parâmetros do DBSCAN")
         
         eps_val = st.sidebar.slider("Raio de Vizinhança (Eps):", min_value=0.1, max_value=2.0, value=0.5, step=0.05)
