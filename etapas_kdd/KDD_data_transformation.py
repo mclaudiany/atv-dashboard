@@ -71,48 +71,49 @@ def estruturar_features(df_final_treino, df_teste, modelo=1):
         
         st.dataframe(X_train.head(3), width='stretch')
         st.success(f"Tensores do Modelo 2 (SMOTE) estruturados: {X_train.shape[0]} amostras de treino balanceadas.")
-        st.rerun()
 
 def escalonar_por_zcore(df_train):
     num_continuas = ['nodule_size_mm', 'HU_mean', 'HU_std', 'PET_SUVmax', 'PET_SUVmean', 'patient_age', 'PD-L1_expression_level', 'tumor_mutational_burden']
     num_existentes = [col for col in num_continuas if col in df_train.columns]
 
-    if num_existentes:
-        scaler = StandardScaler()
-        
-        df_fill = df_train[num_existentes].fillna(df_train[num_existentes].median(numeric_only=True))
-        dados_escalados_train = scaler.fit_transform(df_fill)
-        df_depois_num = pd.DataFrame(dados_escalados_train, columns=num_existentes)
+    if not num_existentes:
+        return df_train.copy()
+    
+    scaler = StandardScaler()
+    
+    df_fill = df_train[num_existentes].fillna(df_train[num_existentes].median(numeric_only=True))
+    dados_escalados_train = scaler.fit_transform(df_fill)
+    df_depois_num = pd.DataFrame(dados_escalados_train, columns=num_existentes)
 
-        col_graph1, col_graph2 = st.columns(2)
+    col_graph1, col_graph2 = st.columns(2)
+    
+    with col_graph1:
+        fig_antes = go.Figure()
+        fig_antes.add_trace(go.Violin(y=df_train['nodule_size_mm'].dropna(), name="Tamanho do Nódulo (mm)", line_color="#2B6CB0", box_visible=True))
+        fig_antes.add_trace(go.Violin(y=df_train['HU_mean'].dropna(), name="Densidade (HU_mean)", line_color="#E75355", box_visible=True))
         
-        with col_graph1:
-            fig_antes = go.Figure()
-            fig_antes.add_trace(go.Violin(y=df_train['nodule_size_mm'].dropna(), name="Tamanho do Nódulo (mm)", line_color="#2B6CB0", box_visible=True))
-            fig_antes.add_trace(go.Violin(y=df_train['HU_mean'].dropna(), name="Densidade (HU_mean)", line_color="#E75355", box_visible=True))
-            
-            if 'PD-L1_expression_level' in df_train.columns:
-                fig_antes.add_trace(go.Violin(y=df_train['PD-L1_expression_level'].dropna(), name="Expressão PD-L1 (%)", line_color="#7BB8F2", box_visible=True))
-            
-            fig_antes.update_layout(title="Distribuição Original", height=350, margin=dict(t=40, b=40, l=20, r=20))
-            st.plotly_chart(fig_antes, width='stretch')
+        if 'PD-L1_expression_level' in df_train.columns:
+            fig_antes.add_trace(go.Violin(y=df_train['PD-L1_expression_level'].dropna(), name="Expressão PD-L1 (%)", line_color="#7BB8F2", box_visible=True))
+        
+        fig_antes.update_layout(title="Distribuição Original", height=350, margin=dict(t=40, b=40, l=20, r=20))
+        st.plotly_chart(fig_antes, width='stretch')
 
-        with col_graph2:
-            fig_depois = go.Figure()
-            fig_depois.add_trace(go.Violin(y=df_depois_num['nodule_size_mm'], name="Tamanho Nódulo (Z)", line_color="#2B6CB0", box_visible=True))
-            fig_depois.add_trace(go.Violin(y=df_depois_num['HU_mean'], name="Densidade (Z)", line_color="#E75355", box_visible=True))
-            
-            if 'PD-L1_expression_level' in df_depois_num.columns:
-                fig_depois.add_trace(go.Violin(y=df_depois_num['PD-L1_expression_level'], name="Expressão PD-L1 (Z)", line_color="#7BB8F2", box_visible=True))
-            
-            fig_depois.update_layout(title="Distribuição Após Z-SCORE", height=350, margin=dict(t=40, b=40, l=20, r=20))
-            st.plotly_chart(fig_depois, width='stretch')
-            
-        df_train_escalado = df_train.copy()
-        df_train_escalado[num_existentes] = df_fill
-        df_train_escalado[num_existentes] = df_depois_num.values
+    with col_graph2:
+        fig_depois = go.Figure()
+        fig_depois.add_trace(go.Violin(y=df_depois_num['nodule_size_mm'], name="Tamanho Nódulo (Z)", line_color="#2B6CB0", box_visible=True))
+        fig_depois.add_trace(go.Violin(y=df_depois_num['HU_mean'], name="Densidade (Z)", line_color="#E75355", box_visible=True))
         
-        return df_train_escalado
+        if 'PD-L1_expression_level' in df_depois_num.columns:
+            fig_depois.add_trace(go.Violin(y=df_depois_num['PD-L1_expression_level'], name="Expressão PD-L1 (Z)", line_color="#7BB8F2", box_visible=True))
+        
+        fig_depois.update_layout(title="Distribuição Após Z-SCORE", height=350, margin=dict(t=40, b=40, l=20, r=20))
+        st.plotly_chart(fig_depois, width='stretch')
+        
+    df_train_escalado = df_train.copy()
+    df_train_escalado[num_existentes] = df_fill
+    df_train_escalado[num_existentes] = df_depois_num.values
+    
+    return df_train_escalado
 
 def mapear_categorias_encodings():
     col_enc1, col_enc2 = st.columns(2)

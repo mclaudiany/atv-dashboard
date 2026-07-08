@@ -2,9 +2,11 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import numpy as np
-import torch
+import plotly.graph_objects as go
+
 from sklearn.metrics import classification_report, accuracy_score,confusion_matrix,silhouette_score, davies_bouldin_score
 from sklearn.ensemble import RandomForestClassifier
+
 
 def etapa_resultado_metricas():
     st.header("Avaliação e Interpretação de Métricas")
@@ -13,9 +15,9 @@ def etapa_resultado_metricas():
     st.markdown("Esta etapa garante que os modelos possuem capacidade de generalização através do cruzamento de dados com a base de teste.")
 
     epocas = st.session_state.get("epocas_executadas", 100)
-    loss_name_mlp = st.session_state.loss_function_mlp
+    loss_name_mlp = st.session_state.get("loss_function_mlp", None)
     loss_mlp_limpo = loss_name_mlp.split(' (')[0] if loss_name_mlp else "N/A"
-    loss_name_kmeans = st.session_state.loss_function_kmeans
+    loss_name_kmeans = st.session_state.get("loss_function_kmeans", "N/A")
     
     st.info(
         f"**Auditoria do Pipeline Ativo:** Métricas consolidadas após otimização profunda executada por **{epocas} épocas**. "
@@ -31,16 +33,7 @@ def etapa_resultado_metricas():
     
     with tab_atributos:
         st.title("Análise de Importância de Atributos (Feature Importance)")
-        df_completo = pd.concat([st.session_state.df_train, st.session_state.df_test], ignore_index=True)
-
-        generos_selecionados = st.multiselect("Filtrar por Gênero:", options=df_completo['patient_gender'].unique())
-        subtipos_selecionados = st.multiselect("Filtrar por Subtipo:", options=df_completo['cancer_subtype'].unique())
-
-        df_filtrado = df_completo[
-            (df_completo['patient_gender'].isin(generos_selecionados)) & 
-            (df_completo['cancer_subtype'].isin(subtipos_selecionados))
-        ]
-
+        df_filtrado = gerar_filtros()
         mostrar_feature_importance(df_filtrado)
                 
     with tab_desempenho:
@@ -54,6 +47,26 @@ def etapa_resultado_metricas():
     with tab_densidade:
         st.title("Índices de Validação de Densidade")
         gerar_indice_densidade()
+
+
+def gerar_filtros():
+    df_completo = pd.concat([st.session_state.df_train, st.session_state.df_test], ignore_index=True)
+
+    opcoes_genero = [g for g in df_completo['patient_gender'].unique() if g in ['Male', 'Female']]
+    opcoes_subtipo = [s for s in df_completo['cancer_subtype'].unique() if pd.notna(s) and s != 'No Cancer']
+
+    generos_selecionados = st.multiselect("Filtrar por Gênero:", options=opcoes_genero)
+    subtipos_selecionados = st.multiselect("Filtrar por Subtipo:", options=opcoes_subtipo)
+
+    generos_filtro = generos_selecionados if generos_selecionados else opcoes_genero
+    subtipos_filtro = subtipos_selecionados if subtipos_selecionados else opcoes_subtipo
+
+    df_filtrado = df_completo[
+            (df_completo['patient_gender'].isin(generos_filtro)) & 
+            (df_completo['cancer_subtype'].isin(subtipos_filtro))
+        ]
+    
+    return df_filtrado
     
 def gerar_indice_densidade():
     score_silhueta,score_db, n_ruido, p_ruido = calcular_indices_densidade()
@@ -89,6 +102,11 @@ def gerar_indice_densidade():
         )
 
 def calcular_indices_densidade():
+    if "dbscan_labels" not in st.session_state or st.session_state.dbscan_labels is None:
+       st.error("**Resultados de Clusterização não encontrados!**")
+       st.warning("Por favor, acesse a etapa anterior (Mineração de Dados), execute o algoritmo DBSCAN ou K-Means para gerar os grupos e depois retorne a esta aba.")
+       st.stop()
+       
     labels_clusters = st.session_state.dbscan_labels
     X_scaled = st.session_state.dbscan_X_scaled
     
@@ -282,6 +300,17 @@ def gerar_matriz_confusao():
         st.warning(" Nenhuma matriz preditiva encontrada.")
 
 def gerar_tabela_metricas_detalhada():
+    chaves_obrigatorias = ["y_true_m1", "y_pred_m1", "y_true_m2", "y_pred_m2"]
+    dados_ausentes = [
+        chave for chave in chaves_obrigatorias 
+        if chave not in st.session_state or st.session_state[chave] is None
+    ]
+    
+    if dados_ausentes:
+        st.warning("**Histórico de predições incompleto ou não encontrado!**")
+        st.info("Por favor, acesse a etapa de **Mineração de Dados** e execute o treinamento dos modelos para gerar os vetores de teste e predição antes de visualizar as métricas.")
+        return
+    
     y_true_m1 = st.session_state.y_true_m1
     y_pred_m1 = st.session_state.y_pred_m1
     y_true_m2 = st.session_state.y_true_m2
@@ -438,9 +467,7 @@ def mostrar_feature_importance(df_filtrado):
     features = ['nodule_size_mm', 'HU_mean', 'HU_std', 'PET_SUVmax', 'PET_SUVmean', 'patient_age', 'PD-L1_expression_level', 'tumor_mutational_burden']
     
     if target_col in df_filtrado.columns and all(col in df_filtrado.columns for col in features):
-        
         df_ml = df_filtrado[features + [target_col]].dropna()
-        
         if len(df_ml) == 0:
             st.warning("Não há dados suficientes (após remoção de nulos) para calcular a importância dos atributos.")
             return
@@ -475,5 +502,133 @@ def mostrar_feature_importance(df_filtrado):
         
         top_feature = df_importance.iloc[-1]['Atributo']
         st.info(f"**Insight:** Para o alvo **{target_col}**, a característica **{top_feature}** foi a mais decisiva para o aprendizado do modelo.")  
+        
+        if target_col == 'cancer_subtype':
+            mostrar_shap_subtipos()
+        
+        
     else:
         st.warning("Colunas necessárias para o cálculo de Machine Learning não foram encontradas.")
+
+
+def mostrar_shap_subtipos():
+    st.markdown("**Matriz SHAP Dinâmica por Subtipo**")
+    
+    df_teste = st.session_state.df_test
+
+    if "pesos_reais_shap" not in st.session_state or st.session_state.pesos_reais_shap is None:
+        st.warning("Ajuste de pesos não encontrado. Por favor, execute o treinamento da Rede Neural na aba ao lado primeiro.")
+        return
+
+    pesos_base_reais = st.session_state.pesos_reais_shap
+    features_presentes = [
+        col for col in df_teste.columns 
+        if col not in ["cancer_presence", "cancer_subtype"]
+    ]
+    if not features_presentes:
+        st.error("O DataFrame de teste não possui colunas válidas para exibição.")
+        return
+
+    dicionario_nomes = {
+        'nodule_size_mm': 'Tamanho do Nódulo (mm)',
+        'HU_mean': 'Densidade Média (HU)',
+        'HU_std': 'Desvio Padrão Densidade (HU)',
+        'GLCM_contrast': 'Contraste de Textura (GLCM)',
+        'PET_SUVmax': 'Captação Máxima (PET SUVmax)',
+        'PET_SUVmean': 'Captação Média (PET SUVmean)',
+        'patient_age': 'Idade do Paciente',
+        'smoking_history': 'Histórico de Tabagismo',
+        'family_history': 'Histórico Familiar',
+        'tumor_location': 'Localização do Tumor',
+        'radiation_therapy': 'Tratamento por Radiação',
+        'immunotherapy_received': 'Imunoterapia Recebida',
+        'EGFR_mutation_status': 'Status de Mutação EGFR',
+        'ALK_fusion_status': 'Status de Fusão ALK',
+        'tumor_mutational_burden': 'Carga Mutacional Tumoral (TMB)'
+    }
+    labels_amigaveis = [dicionario_nomes.get(f, f) for f in features_presentes]
+
+    pesos_adeno = [pesos_base_reais.get("Adenocarcinoma", {}).get(f, 0.0) for f in features_presentes]
+    pesos_squamous = [pesos_base_reais.get("Squamous Cell", {}).get(f, 0.0) for f in features_presentes]
+    pesos_sclc = [pesos_base_reais.get("SCLC", {}).get(f, 0.0) for f in features_presentes]
+    pesos_other = [pesos_base_reais.get("Other", {}).get(f, 0.0) for f in features_presentes]
+
+    fig = go.Figure()
+    
+    cores_adeno, text_pos_adeno = obter_cores_e_posicao(pesos_adeno)
+    fig.add_trace(go.Bar(
+        x=pesos_adeno, y=labels_amigaveis, orientation='h',
+        marker=dict(color=cores_adeno, line=dict(width=0)), 
+        name="Adenocarcinoma", visible=True,
+        text=[f"{v:+.4f}" for v in pesos_adeno], textposition=text_pos_adeno,
+        textfont=dict(size=10, color="white")
+    ))
+
+    cores_squamous, text_pos_squamous = obter_cores_e_posicao(pesos_squamous)
+    fig.add_trace(go.Bar(
+        x=pesos_squamous, y=labels_amigaveis, orientation='h',
+        marker=dict(color=cores_squamous, line=dict(width=0)), 
+        name="Squamous Cell", visible=False,
+        text=[f"{v:+.4f}" for v in pesos_squamous], textposition=text_pos_squamous,
+        textfont=dict(size=10, color="white")
+    ))
+
+    cores_sclc, text_pos_sclc = obter_cores_e_posicao(pesos_sclc)
+    fig.add_trace(go.Bar(
+        x=pesos_sclc, y=labels_amigaveis, orientation='h',
+        marker=dict(color=cores_sclc, line=dict(width=0)), 
+        name="SCLC", visible=False,
+        text=[f"{v:+.4f}" for v in pesos_sclc], textposition=text_pos_sclc,
+        textfont=dict(size=10, color="white")
+    ))
+
+    cores_other, text_pos_other = obter_cores_e_posicao(pesos_other)
+    fig.add_trace(go.Bar(
+        x=pesos_other, y=labels_amigaveis, orientation='h',
+        marker=dict(color=cores_other, line=dict(width=0)), 
+        name="Other", visible=False,
+        text=[f"{v:+.4f}" for v in pesos_other], textposition=text_pos_other,
+        textfont=dict(size=10, color="white")
+    ))
+
+    fig.update_layout(
+        updatemenus=[
+            dict(
+                active=3 if pesos_other == pesos_adeno else 0,
+                buttons=list([
+                    dict(label="Foco: Adenocarcinoma", method="update", args=[{"visible": [True, False, False, False]}, {"title": "<b>Assinatura Espacial: Adenocarcinoma</b>"}]),
+                    dict(label="Foco: Squamous Cell Carcinoma", method="update", args=[{"visible": [False, True, False, False]}, {"title": "<b>Assinatura Espacial: Squamous Cell</b>"}]),
+                    dict(label="Foco: SCLC (Células Pequenas)", method="update", args=[{"visible": [False, False, True, False]}, {"title": "<b>Assinatura Espacial: SCLC</b>"}]),
+                    dict(label="Foco: Other (Outros Subtipos)", method="update", args=[{"visible": [False, False, False, True]}, {"title": "<b>Assinatura Espacial: Outros Subtipos</b>"}]),
+                ]),
+                direction="down", showactive=True,
+                x=0.0, xanchor="left", y=1.22, yanchor="top",
+                bgcolor="#FFFFFF", bordercolor="#0E81FC", font=dict(size=12, color="#053FA1")
+            )
+        ]
+    )
+   
+    fig.update_layout(
+        title="",
+        title_font=dict(size=16, color="#1A202C"),
+        xaxis_title="Contribuição Marginal para o Alvo (Importância de Permutação)",
+        xaxis=dict(showgrid=True, gridcolor="#E2E8F0", zeroline=False, tickfont=dict(size=11, color="#024AC6")),
+        yaxis=dict(autorange="reversed", tickfont=dict(size=12, color="#0E2C61")),
+        bargap=0.2, 
+        barmode='overlay', 
+        template="plotly_white",
+        height=550,
+        margin=dict(t=130, b=50, l=160, r=40), 
+        showlegend=False
+    )
+
+    fig.add_vline(x=0, line_width=1.5, line_color="#065FF9")
+    st.plotly_chart(fig, width='stretch')
+    
+def obter_cores_e_posicao(lista_pesos):
+        cores = ["#236EBE" if v >= 0 else '#C53030' for v in lista_pesos]
+        posicoes = ['outside' if abs(v) < 0.02 else 'inside' for v in lista_pesos]
+        return cores, posicoes
+    
+      
+  

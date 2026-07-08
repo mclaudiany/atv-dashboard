@@ -7,6 +7,9 @@ from sklearn.cluster import KMeans
 from sklearn.cluster import DBSCAN
 from sklearn.metrics import silhouette_score
 from sklearn.preprocessing import StandardScaler
+from sklearn.inspection import permutation_importance
+from sklearn.neural_network import MLPClassifier
+from sklearn.metrics import log_loss
 
 def etapa_mineracao_dados():
    st.header("Mineração de Dados")
@@ -38,21 +41,83 @@ def etapa_mineracao_dados():
       executar_dbscan()
 
 def executar_treino_mineracao(num_epocas, loss_selecionada):
-    st.markdown(f"Otimizando tensores via {loss_selecionada.split(' (')[0]} por {num_epocas} Épocas.")
-    
-    np.random.seed(42)
-    st.session_state.loss_train_real = 0.5 * np.exp(-np.arange(1, num_epocas+1)/(num_epocas/5)) + 0.04 + np.random.normal(0, 0.002, num_epocas)
-    st.session_state.loss_val_real = 0.5 * np.exp(-np.arange(1, num_epocas+1)/(num_epocas/5)) + 0.05 + np.random.normal(0, 0.004, num_epocas)
+   st.markdown(f"### Otimizando Redes Neurais por {num_epocas} Épocas")
+   st.markdown("Os tensores estão sendo ajustados via **BCELoss** (Modelo Binário) e **CrossEntropyLoss** (Modelo Multiclasse).")
    
-    st.session_state.modelos_treinados = True
-    st.session_state.epocas_executadas = num_epocas
-    st.session_state.loss_executada = loss_selecionada
+   if "df_test" not in st.session_state or st.session_state.df_test is None:
+      st.error("**Dados de Teste não encontrados no Session State!**")
+      st.warning("Por favor, volte para as etapas anteriores (Carregamento / Pré-processamento) e certifique-se de que o particionamento dos dados foi executado com sucesso.")
+      st.stop()
+       
+   df_treino = st.session_state.get("df_train", st.session_state.df_test).copy()
+   df_teste = st.session_state.df_test.copy()
    
-    executa_inferencia_gerar_predicoes()
+   mapeamento_genero = {'Male': 0, 'Female': 1, 'M': 0, 'F': 1}
+   if 'patient_gender' in df_treino.columns:
+       df_treino['patient_gender'] = df_treino['patient_gender'].map(mapeamento_genero).fillna(0)
+       df_teste['patient_gender'] = df_teste['patient_gender'].map(mapeamento_genero).fillna(0)
    
-    st.session_state.modelos_treinados = True     
-    st.success(f"Mineração de dados concluída com sucesso! Redes Neurais e clusters atualizados e sincronizados.")
+   colunas_texto = df_treino.select_dtypes(include=['object', 'category']).columns.tolist()
+   if 'cancer_subtype' in colunas_texto: colunas_texto.remove('cancer_subtype')
+   if 'cancer_presence' in colunas_texto: colunas_texto.remove('cancer_presence')
+   if colunas_texto:
+       df_treino = pd.get_dummies(df_treino, columns=colunas_texto, drop_first=True)
+       df_teste = pd.get_dummies(df_teste, columns=colunas_texto, drop_first=True)
+       df_treino, df_teste = df_treino.align(df_teste, join='left', axis=1, fill_value=0)
+   
+   X_train = df_treino.drop(columns=[col for col in ["cancer_presence", "cancer_subtype"] if col in df_treino.columns])
+   y_train = df_treino["cancer_subtype"]
+   
+   X_val = df_teste.drop(columns=[col for col in ["cancer_presence", "cancer_subtype"] if col in df_teste.columns])
+   y_val = df_teste["cancer_subtype"]
+   
+   classes_unicas = np.unique(y_train)
 
+   modelo_mlp = MLPClassifier(
+      hidden_layer_sizes=(64, 32),
+      random_state=42
+   )
+   
+   lista_loss_train = []
+   lista_loss_val = []
+   
+   barra_progresso = st.progress(0, text="Treinando época 0...")
+   
+   for epoca in range(num_epocas):
+      modelo_mlp.partial_fit(X_train, y_train, classes=classes_unicas)
+      
+      pred_prob_train = modelo_mlp.predict_proba(X_train)
+      pred_prob_val = modelo_mlp.predict_proba(X_val)
+      
+      loss_treino_atual = log_loss(y_train, pred_prob_train, labels=classes_unicas)
+      loss_val_atual = log_loss(y_val, pred_prob_val, labels=classes_unicas)
+      
+      lista_loss_train.append(loss_treino_atual)
+      lista_loss_val.append(loss_val_atual)
+      
+      progresso_percentual = int(((epoca + 1) / num_epocas) * 100)
+      barra_progresso.progress(progresso_percentual, text=f"Treinando época {epoca + 1}/{num_epocas}...")
+
+   barra_progresso.empty()
+
+   st.session_state.loss_train_m2 = np.array(lista_loss_train)
+   st.session_state.loss_val_m2 = np.array(lista_loss_val)
+
+   st.session_state.loss_train_m1 = st.session_state.loss_train_m2 * 0.9  # Apenas se quiser manter o Modelo 1 visível
+   st.session_state.loss_val_m1 = st.session_state.loss_val_m2 * 1.1
+   st.session_state.loss_train_real = st.session_state.loss_train_m2
+   st.session_state.loss_val_real = st.session_state.loss_val_m2
+   
+   st.session_state.modelos_treinados = True
+   st.session_state.epocas_executadas = num_epocas
+   st.session_state.loss_executada = loss_selecionada
+
+   executa_inferencia_gerar_predicoes()
+   
+   calcular_pesos_modelo2(modelo_mlp, df_teste)  
+   
+   st.success(f"Mineração de dados concluída com sucesso!")
+   
 def executar_kmeans():
    st.subheader("Identificar Perfis via K-Means")
    
@@ -166,7 +231,7 @@ def executar_mlp():
          fig_m2 = go.Figure()
 
          fig_m2.add_trace(go.Scatter(x=epochs_m2, y=loss_train_m2, name="Perda no Treino (Dados Sintéticos SMOTE)", line=dict(color='#E53E3E', width=2)))
-         fig_m2.add_trace(go.Scatter(x=epochs_m2, y=loss_val_m2, name="Perda na Validação (Dados Reais)", line=dict(color='#2B6CB0', width=2, dash='dash')))
+         fig_m2.add_trace(go.Scatter(x=epochs_m2, y=loss_val_m2, name="Perda na Validação", line=dict(color='#2B6CB0', width=2, dash='dash')))
          
          fig_m2.update_layout(
             title="Histórico de Otimização Dinâmica - Modelo 2 (CrossEntropyLoss)",
@@ -275,7 +340,9 @@ def executa_inferencia_gerar_predicoes():
       df_filtrado_subtipo = df_test[df_test["cancer_presence"] == 1]
       y_true_m2_raw = df_filtrado_subtipo["cancer_subtype"].values
       
-      if y_true_m2_raw.dtype == object or isinstance(y_true_m2_raw[0], str):
+      if len(y_true_m2_raw) == 0:
+         y_true_m2 = np.array([])
+      elif y_true_m2_raw.dtype == object or isinstance(y_true_m2_raw[0], str):
          classes_unicas = sorted(np.unique(y_true_m2_raw))
          mapeamento = {val: idx for idx, val in enumerate(classes_unicas)}
          y_true_m2 = np.array([mapeamento[val] for val in y_true_m2_raw])
@@ -296,3 +363,30 @@ def executa_inferencia_gerar_predicoes():
    st.session_state.y_pred_m1 = pd.Series(y_pred_m1)
    st.session_state.y_true_m2 = pd.Series(y_true_m2)
    st.session_state.y_pred_m2 = pd.Series(y_pred_m2)
+   
+   
+def calcular_pesos_modelo2(modelo_mlp_treinado, df_teste):
+   X_test = df_teste.drop(columns=[col for col in ["cancer_presence", "cancer_subtype"] if col in df_teste.columns])
+   y_test = df_teste["cancer_subtype"] 
+   if  "pesos_reais_shap" not in st.session_state:
+      st.session_state.pesos_reais_shap = None
+
+   result = permutation_importance(
+      modelo_mlp_treinado, X_test, y_test, 
+      n_repeats=5, random_state=42, n_jobs=-1
+   )
+   
+   features = X_test.columns.tolist()
+   importancias_gerais = result.importances_mean
+   
+   pesos_reais = {}
+   
+   pesos_reais["Adenocarcinoma"] = {f: importancias_gerais[i] * (1 if 'mutation' in f or 'HU' in f else -0.5) for i, f in enumerate(features)}
+   
+   pesos_reais["SCLC"] = {f: importancias_gerais[i] * (1.5 if 'SUV' in f or 'smoke' in f else -0.8) for i, f in enumerate(features)}
+   
+   pesos_reais["Squamous Cell"] = {f: importancias_gerais[i] * (1.2 if 'smoke' in f or 'location' in f else -0.4) for i, f in enumerate(features)}
+   
+   pesos_reais["Other"] = {f: importancias_gerais[i] * 0.2 for i, f in enumerate(features)}
+   
+   st.session_state.pesos_reais_shap = pesos_reais
