@@ -1,6 +1,7 @@
 import streamlit as st
 import plotly.express as px
 import pandas as pd
+import numpy as np
 import plotly.graph_objects as go
 from sklearn.cluster import DBSCAN
 from sklearn.preprocessing import StandardScaler
@@ -57,6 +58,9 @@ def secao_analise_distribuicao_genero_subtipo_pp2(df_treino, df_teste):
     """)
 
     df = pd.concat([df_treino, df_teste], axis=0).copy()
+    if 'cancer_subtype' in df.columns:
+        df = df[df['cancer_subtype'] != 'No Cancer']
+        
     df_gender_subtype = (df.groupby(['cancer_subtype', 'patient_gender']).size().reset_index(name='patient_count'))
     
     if all(col in df.columns for col in ['cancer_subtype', 'patient_gender']):
@@ -201,4 +205,3 @@ def secao_identificacao_outliers_dbscan_pp2(df_treino, df_teste):
         * Os pontos mapeados em vermelho representam pacientes com características clínicas ou radiómicas extremamente raras (ex: nódulos gigantes com textura incomum). 
         * Na arquitetura do projeto, o DBSCAN atua como um **filtro de segurança**: isolando eses casos atípicos, evitando que as redes neurais (Modelos 1 e 2) induzam ao erro. 
         """)
-    
